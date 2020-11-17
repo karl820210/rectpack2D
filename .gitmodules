@@ -1,0 +1,6 @@
+[submodule "3rdparty/Optional"]
+	path = 3rdparty/Optional
+	url = https://github.com/mapbox/Optional.git
+[submodule "3rdparty/variant"]
+	path = 3rdparty/variant
+	url = https://github.com/karl820210/variant.git

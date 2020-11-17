@@ -1,6 +1,32 @@
 #pragma once
 #include "insert_and_split.h"
 
+#if _cplusplue >= 201703L
+
+#include <optional>
+
+#ifndef optionalWarp
+#define optionalWarp std::optional
+#endif // optionalWarp
+
+#ifndef nullOpt
+#define nullOpt std::nullopt
+#endif // nullOpt
+
+#else // _cplusplue
+
+#include "optional.hpp"
+
+#ifndef optionalWarp
+#define optionalWarp std::experimental::optional
+#endif // optionalWarp
+
+#ifndef nullOpt
+#define nullOpt std::experimental::nullopt
+#endif // nullOpt
+
+#endif //_cplusplue
+
 namespace rectpack2D {
 	enum class flipping_option {
 		DISABLED,
@@ -23,7 +49,7 @@ namespace rectpack2D {
 		static auto make_output_rect(const int x, const int y, const int w, const int h, const bool flipped) {
 			return rect_xywhf(x, y, w, h, flipped);
 		}
-
+		
 	public:
 		using output_rect_type = std::conditional_t<allow_flip, rect_xywhf, rect_xywh>;
 
@@ -41,7 +67,7 @@ namespace rectpack2D {
 		}
 
 		template <class F>
-		std::optional<output_rect_type> insert(const rect_wh image_rectangle, F report_candidate_empty_space) {
+		optionalWarp<output_rect_type> insert(const rect_wh image_rectangle, F report_candidate_empty_space) {
 			for (int i = static_cast<int>(spaces.get_count()) - 1; i >= 0; --i) {
 				const auto candidate_space = spaces.get(i);
 
@@ -50,16 +76,21 @@ namespace rectpack2D {
 				auto accept_result = [this, i, image_rectangle, candidate_space](
 					const created_splits& splits,
 					const bool flipping_necessary
-				) -> std::optional<output_rect_type> {
+				) -> optionalWarp<output_rect_type> {
 					spaces.remove(i);
 
 					for (int s = 0; s < splits.count; ++s) {
 						if (!spaces.add(splits.spaces[s])) {
-							return std::nullopt;
+							return nullOpt;
 						}
 					}
-
-					if constexpr(allow_flip) {
+					
+#if _cplusplue >= 201703L
+					if constexpr(allow_flip)
+#else
+					if (allow_flip) 
+#endif
+					{
 						const auto result = make_output_rect(
 							candidate_space.x,
 							candidate_space.y,
@@ -71,7 +102,12 @@ namespace rectpack2D {
 						current_aabb.expand_with(result);
 						return result;
 					}
-					else if constexpr(!allow_flip) {
+#if _cplusplue >= 201703L
+					else if constexpr(!allow_flip) 
+#else
+					else if (!allow_flip) 
+#endif	
+					{
 						(void)flipping_necessary;
 
 						const auto result = make_output_rect(
@@ -90,7 +126,12 @@ namespace rectpack2D {
 					return rectpack2D::insert_and_split(img, candidate_space);
 				};
 
-				if constexpr(!allow_flip) {
+#if _cplusplue >= 201703L
+				if constexpr(!allow_flip)
+#else
+				if (!allow_flip) 
+#endif
+				{
 					if (const auto normal = try_to_insert(image_rectangle)) {
 						return accept_result(normal, false);
 					}
@@ -131,7 +172,7 @@ namespace rectpack2D {
 				}
 			}
 
-			return std::nullopt;
+			return nullOpt;
 		}
 
 		decltype(auto) insert(const rect_wh& image_rectangle) {

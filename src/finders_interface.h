@@ -1,9 +1,44 @@
 #pragma once
-#include <optional>
+
 #include <vector>
 #include <array>
-#include <variant>
 #include <algorithm>
+
+#if _cplusplue >= 201703L
+
+#include <optional>
+#include <variant>
+
+#ifndef optionalWarp
+#define optionalWarp std::optional
+#endif // optionalWarp
+
+#ifndef nullOpt
+#define nullOpt std::nullopt
+#endif // nullOpt
+
+#ifndef variantWarp
+#define variantWarp std::variant
+#endif // variantWarp
+
+#else // _cplusplue
+
+#include "optional.hpp"
+#include "mapbox/variant.hpp"
+
+#ifndef optionalWarp
+#define optionalWarp std::experimental::optional
+#endif // optionalWarp
+
+#ifndef nullOpt
+#define nullOpt std::experimental::nullopt
+#endif // nullOpt
+
+#ifndef variantWarp
+#define variantWarp mapbox::util::variant
+#endif // variantWarp
+
+#endif //_cplusplue
 
 #include "insert_and_split.h"
 #include "empty_spaces.h"
@@ -68,14 +103,24 @@ namespace rectpack2D {
 		and will only write the x, y coordinates of the best packing found among the orders.
 	*/
 
+#if _cplusplue < 201703L
+	template <class order_type, int count_orders>
+	inline void make_order_recursive(std::array<order_type, count_orders> &orders, std::size_t& f) { }
+	template <class order_type, int count_orders, class Comparator, class... Comparators>
+	inline void make_order_recursive(std::array<order_type, count_orders> &orders, std::size_t& f, const Comparator& comparator, Comparators... comparators)
+	{
+		std::sort(orders[f].begin(), orders[f].end(), comparator);
+		++f;
+		make_order_recursive(orders, f, comparators...);
+	}
+#endif
+
 	template <class empty_spaces_type, class F, class G, class Comparator, class... Comparators>
 	rect_wh find_best_packing(
-		std::vector<output_rect_t<empty_spaces_type>>& subjects,
-		const finder_input<F, G>& input,
+		std::vector<output_rect_t<empty_spaces_type>>& subjects, const finder_input<F, G>& input,
 
-		Comparator comparator,
-		Comparators... comparators
-	) {
+		Comparator comparator, Comparators... comparators)
+	{
 		using rect_type = output_rect_t<empty_spaces_type>;
 		using order_type = std::vector<rect_type*>;
 
@@ -100,6 +145,7 @@ namespace rectpack2D {
 
 		std::size_t f = 0;
 
+#if _cplusplue >= 201703L
 		auto make_order = [&f](auto& predicate) {
 			std::sort(orders[f].begin(), orders[f].end(), predicate);
 			++f;
@@ -107,6 +153,9 @@ namespace rectpack2D {
 
 		make_order(comparator);
 		(make_order(comparators), ...);
+#else
+		make_order_recursive(orders, f, comparator, comparators...);
+#endif
 
 		return find_best_packing_impl<empty_spaces_type, order_type>(
 			[](auto callback){ for (auto& o : orders) { callback(o); } },

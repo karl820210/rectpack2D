@@ -49,6 +49,10 @@ if (CLANG)
 	)
 endif()
 
+set(Third_DIR_LIST ${PROJECT_SOURCE_DIR}/3rdparty/variant/include)
+list(APPEND Third_DIR_LIST ${PROJECT_SOURCE_DIR}/3rdparty/Optional)
+include_directories( ${Third_DIR_LIST})
+
 add_executable(rectpack2D "example/main.cpp")
 
 if (CLANG)

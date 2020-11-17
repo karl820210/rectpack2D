@@ -1,14 +1,35 @@
 #pragma once
+
+#if _cplusplue >= 201703L
+
 #include <variant>
+
+#ifndef variantWarp
+#define variantWarp std::variant
+#endif // variantWarp
+
+#else // _cplusplue
+
+#include "mapbox/variant.hpp"
+
+#ifndef variantWarp
+#define variantWarp mapbox::util::variant
+#endif // variantWarp
+
+#endif //_cplusplue
+
 #include <cassert>
 #include "rect_structs.h"
+
+
 
 namespace rectpack2D {
 	enum class callback_result {
 		ABORT_PACKING,
 		CONTINUE_PACKING
 	};
-
+	
+#if _cplusplue >= 201703L
 	template <class T>
 	auto& dereference(T& r) {
 		/* 
@@ -16,13 +37,31 @@ namespace rectpack2D {
 			as well as ones that are just plain objects in a vector.
 	   */	   
 
-		if constexpr(std::is_pointer_v<T>) {
+		if constexpr(std::is_pointer_v<T>) 
+		{
 			return *r;
 		}
 		else {
 			return r;
 		}
 	};
+#else
+
+	template <class T>
+	std::remove_pointer_t<T>& dereference(T& r, std::true_type) {
+		return *r;
+	};
+
+	template <class T>
+	T& dereference(T& r, std::false_type) {
+		return r;
+	};
+
+	template <class T>
+	auto& dereference(T& r) {
+		return dereference(r, std::is_pointer<T>{});
+	};
+#endif
 
 	/*
 		This function will do a binary search on viable bin sizes,
@@ -45,13 +84,10 @@ namespace rectpack2D {
 	};
 
 	template <class empty_spaces_type, class O>
-	std::variant<total_area_type, rect_wh> best_packing_for_ordering_impl(
-		empty_spaces_type& root,
-		O ordering,
-		const rect_wh starting_bin,
-		const int discard_step,
-		const bin_dimension tried_dimension
-	) {
+	variantWarp<total_area_type, rect_wh> best_packing_for_ordering_impl(
+		empty_spaces_type& root, O ordering,
+		const rect_wh starting_bin, const int discard_step, const bin_dimension tried_dimension)
+	{
 		auto candidate_bin = starting_bin;
 
 		int starting_step = 0;
@@ -143,12 +179,10 @@ namespace rectpack2D {
 	}
 
 	template <class empty_spaces_type, class O>
-	std::variant<total_area_type, rect_wh> best_packing_for_ordering(
-		empty_spaces_type& root,
-		O&& ordering,
-		const rect_wh starting_bin,
-		const int discard_step
-	) {
+	variantWarp<total_area_type, rect_wh> best_packing_for_ordering(
+		empty_spaces_type& root, O&& ordering,
+		const rect_wh starting_bin, const int discard_step)
+	{
 		const auto try_pack = [&](
 			const bin_dimension tried_dimension, 
 			const rect_wh starting_bin
@@ -164,16 +198,30 @@ namespace rectpack2D {
 
 		const auto best_result = try_pack(bin_dimension::BOTH, starting_bin);
 
-		if (const auto failed = std::get_if<total_area_type>(&best_result)) {
+#if _cplusplue >= 201703L
+		if (const auto failed = std::get_if<total_area_type>(&best_result)) 
+#else
+		if (const auto failed = best_result.get_if<total_area_type>())
+#endif
+		{
 			return *failed;
 		}
 
+#if _cplusplue >= 201703L
 		auto best_bin = std::get<rect_wh>(best_result);
+#else
+		auto best_bin = best_result.get<rect_wh>();
+#endif
 
 		auto trial = [&](const bin_dimension tried_dimension) {
 			const auto trial = try_pack(tried_dimension, best_bin);
-
-			if (const auto better = std::get_if<rect_wh>(&trial)) {
+			
+#if _cplusplue >= 201703L
+			if (const auto better = std::get_if<rect_wh>(&trial)) 
+#else
+			if (const auto better = trial.get_if<rect_wh>())
+#endif
+			{
 				best_bin = *better;
 			}
 		};
@@ -221,7 +269,12 @@ namespace rectpack2D {
 				input.discard_step
 			);
 
-			if (const auto total_inserted = std::get_if<total_area_type>(&packing)) {
+#if _cplusplue >= 201703L
+			if (const auto total_inserted = std::get_if<total_area_type>(&packing))
+#else
+			if (const auto total_inserted = packing.get_if<total_area_type>())
+#endif			
+			{
 				/*
 					Track which function inserts the most area in total,
 					just in case that all orders will fail to fit into the largest allowed bin.
@@ -233,7 +286,12 @@ namespace rectpack2D {
 					}
 				}
 			}
-			else if (const auto result_bin = std::get_if<rect_wh>(&packing)) {
+#if _cplusplue >= 201703L
+			else if (const auto result_bin = std::get_if<rect_wh>(&packing)) 
+#else
+			else if (const auto result_bin = packing.get_if<rect_wh>())
+#endif					
+			{
 				/* Save the function if it performed the best. */
 				if (result_bin->area() <= best_bin.area()) {
 					best_order = std::addressof(current_order);

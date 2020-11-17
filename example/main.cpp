@@ -93,6 +93,12 @@ int main() {
 		   	by area, by perimeter, by bigger side, by width, by height and by "pathological multiplier"
 			- will be passed by default.
 		*/
+		printf("Example 1: Find best packing with default orders.\n");
+		printf("\n");
+		printf("If you pass no comparators whatsoever, \n");
+		printf("the standard collection of 6 orders:\n");
+		printf("by area, by perimeter, by bigger side, by width, by height and by \"pathological multiplier\"\n");
+		printf("-will be passed by default.\n\n");		
 
 		const auto result_size = find_best_packing<spaces_type>(
 			rectangles,
@@ -110,7 +116,7 @@ int main() {
 
 	{
 		/* Example 2: Find best packing using all provided custom rectangle orders. */
-
+		printf("\nExample 2: Find best packing using all provided custom rectangle orders.\n\n");
 		using rect_ptr = rect_type*;
 
 		auto my_custom_order_1 = [](const rect_ptr a, const rect_ptr b) {
@@ -140,7 +146,7 @@ int main() {
 
 	{
 		/* Example 3: Find best packing exactly in the order of provided input. */
-
+		printf("\nExample 3: Find best packing exactly in the order of provided input.\n\n");
 		const auto result_size = find_best_packing_dont_sort<spaces_type>(
 			rectangles,
 			make_finder_input(
@@ -157,7 +163,7 @@ int main() {
 
 	{
 		/* Example 4: Manually perform insertions. This way you can try your own best-bin finding logic. */
-
+		printf("\nExample 4: Manually perform insertions. This way you can try your own best-bin finding logic.\n\n");
 		auto packing_root = spaces_type({ max_side, max_side });
 		packing_root.flipping_mode = runtime_flipping_mode;
 
@@ -175,6 +181,8 @@ int main() {
 
 		report_result(result_size);
 	}
+
+	system("pause");
 
 	return 0;
 }
